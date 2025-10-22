@@ -8,17 +8,14 @@ const productsRouter = require('./routes/products');
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static website
+
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes
 app.use('/products', productsRouter);
 
-// Create HTTP server to log requests using http module
 const server = http.createServer(app);
 server.on('request', (req, res) => {
   console.log(`[HTTP] ${req.method} ${req.url}`);
