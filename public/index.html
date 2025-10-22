@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple E‑Commerce</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; color: #111; }
+    h1 { margin-bottom: .25rem; }
+    .muted { color: #555; margin-top: 0; }
+    form { display: flex; gap: .5rem; margin: 1rem 0; }
+    input, button { padding: .6rem .7rem; font-size: 1rem; }
+    input { border: 1px solid #ccc; border-radius: 6px; }
+    button { background: #111; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    ul { list-style: none; padding: 0; }
+    li { padding: .6rem .8rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: .5rem; display:flex; justify-content:space-between; }
+    .price { color: #0a7; font-weight: 600; }
+    .error { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Products</h1>
+  <p class="muted">List and add products using the API.</p>
+
+  <form id="addForm">
+    <input id="name" type="text" placeholder="Product name" required />
+    <input id="price" type="number" placeholder="Price" step="0.01" min="0" required />
+    <button type="submit">Add</button>
+  </form>
+  <p id="msg" class="error" role="alert"></p>
+
+  <ul id="list"></ul>
+
+  <script>
+    const list = document.getElementById('list');
+    const form = document.getElementById('addForm');
+    const nameEl = document.getElementById('name');
+    const priceEl = document.getElementById('price');
+    const msg = document.getElementById('msg');
+
+    async function loadProducts() {
+      msg.textContent = '';
+      list.innerHTML = '<li>Loading…</li>';
+      try {
+        const res = await fetch('/products');
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error('Invalid response');
+        if (data.length === 0) {
+          list.innerHTML = '<li>No products yet</li>';
+          return;
+        }
+        list.innerHTML = '';
+        for (const p of data) {
+          const li = document.createElement('li');
+          const name = document.createElement('span');
+          name.textContent = `${p.id}. ${p.name}`;
+          const price = document.createElement('span');
+          price.className = 'price';
+          price.textContent = `$${Number(p.price).toFixed(2)}`;
+          li.appendChild(name);
+          li.appendChild(price);
+          list.appendChild(li);
+        }
+      } catch (e) {
+        msg.textContent = 'Failed to load products.';
+        list.innerHTML = '';
+        console.error(e);
+      }
+    }
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      msg.textContent = '';
+      const name = nameEl.value.trim();
+      const price = Number(priceEl.value);
+      if (!name || Number.isNaN(price)) {
+        msg.textContent = 'Please enter a valid name and price.';
+        return;
+      }
+      const btn = form.querySelector('button');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, price })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Request failed');
+        }
+        nameEl.value = '';
+        priceEl.value = '';
+        await loadProducts();
+      } catch (e) {
+        msg.textContent = e.message || 'Failed to add product.';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    loadProducts();
+  </script>
+</body>
+</html>
